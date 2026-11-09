@@ -3,6 +3,7 @@
 import os
 import random
 import signal
+import time
 from functools import cache
 
 
@@ -16,3 +17,6 @@ def point(name: str) -> None:
     odds = _odds().get(name)
     if odds and random.random() < odds:
         os.kill(os.getpid(), signal.SIGKILL)
+        # Delivery is asynchronous; without this the thread can run on and commit first.
+        while True:
+            time.sleep(1)
