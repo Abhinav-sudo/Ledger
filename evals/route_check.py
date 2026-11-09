@@ -59,7 +59,7 @@ def pick(labels: list[dict]) -> list[str]:
     return sorted(ids)
 
 
-def reset(world: Path, ids: list[str], saver: build.PostgresSaver) -> None:
+def reset(world: Path, ids: list[str], saver: build.OutboxSaver) -> None:
     with psycopg.connect(database_url()) as con:
         con.execute(f"TRUNCATE {WORLD_TABLES} CASCADE")
         con.execute((world / "erp.sql").read_text())

@@ -46,5 +46,7 @@ def database(world: World) -> Iterator[str]:
 @pytest.fixture
 def db(database: str) -> str:
     with psycopg.connect(database) as con:
-        con.execute("TRUNCATE invoice_lines, invoices CASCADE")
+        con.execute(
+            "TRUNCATE invoice_lines, invoices, payment_intents, audit_log, graph_jobs CASCADE"
+        )
     return database

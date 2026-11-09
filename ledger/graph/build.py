@@ -1,7 +1,6 @@
 from functools import partial
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -10,9 +9,11 @@ from psycopg_pool import ConnectionPool
 
 from ledger.contracts.decisions import Analysis, Approval, AuditEvent, Proposal
 from ledger.contracts.invoice import ExtractedInvoice, MatchResult
+from ledger.contracts.payment import PaymentIntent
 from ledger.contracts.state import InvoiceState
 from ledger.graph.nodes import analysts, approve, extract, match, payment_intent, policy, route
 from ledger.llm.router import ModelRouter
+from ledger.side_effects.outbox import OutboxSaver
 
 
 def pool(url: str) -> ConnectionPool:
@@ -23,14 +24,22 @@ def pool(url: str) -> ConnectionPool:
     )
 
 
-CHECKPOINTED = (ExtractedInvoice, MatchResult, Analysis, Proposal, Approval, AuditEvent)
+CHECKPOINTED = (
+    ExtractedInvoice,
+    MatchResult,
+    Analysis,
+    Proposal,
+    Approval,
+    AuditEvent,
+    PaymentIntent,
+)
 
 
-def postgres_saver(conn: ConnectionPool) -> PostgresSaver:
+def postgres_saver(conn: ConnectionPool) -> OutboxSaver:
     serde = JsonPlusSerializer(
         allowed_msgpack_modules=[(c.__module__, c.__name__) for c in CHECKPOINTED]
     )
-    saver = PostgresSaver(conn, serde=serde)
+    saver = OutboxSaver(conn, serde=serde)
     saver.setup()
     return saver
 

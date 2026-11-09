@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi",
     "langgraph>=1.2.20",
-    "langgraph-checkpoint-postgres>=3.2.0",
+    "langgraph-checkpoint-postgres==3.2.0",
     "openai>=3.48.0",
     "psycopg[binary,pool]>=3.3.8",
     "pydantic>=2.14.3",

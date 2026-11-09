@@ -81,10 +81,32 @@ CREATE TABLE payment_intents (
     idempotency_key text NOT NULL UNIQUE,
     status          text NOT NULL CHECK (status IN ('pending', 'sent', 'confirmed', 'failed')),
     attempts        int NOT NULL DEFAULT 0,
-    created_at      timestamptz NOT NULL DEFAULT now()
+    next_attempt_at timestamptz NOT NULL DEFAULT now(),
+    last_error      text,
+    bank_payment_id text,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    sent_at         timestamptz,
+    confirmed_at    timestamptz,
+    -- One intent per invoice: a re-run that computes a different amount or account must not
+    -- create a second payment.
+    UNIQUE (invoice_id)
 );
 
-CREATE INDEX payment_intents_pending ON payment_intents (created_at) WHERE status = 'pending';
+CREATE INDEX payment_intents_due ON payment_intents (next_attempt_at) WHERE status = 'pending';
+
+CREATE TABLE graph_jobs (
+    id          bigserial PRIMARY KEY,
+    invoice_id  text NOT NULL,
+    kind        text NOT NULL CHECK (kind IN ('run', 'resume')),
+    payload     jsonb NOT NULL DEFAULT '{}',
+    status      text NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'done')),
+    lease_until timestamptz,
+    attempts    int NOT NULL DEFAULT 0,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (invoice_id, kind)
+);
+
+CREATE INDEX graph_jobs_queued ON graph_jobs (id) WHERE status = 'queued';
 
 CREATE TABLE audit_log (
     id         bigserial PRIMARY KEY,
