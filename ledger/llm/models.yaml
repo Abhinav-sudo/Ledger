@@ -20,18 +20,18 @@ providers:
 # low-confidence escalation moves to the next entry.
 roles:
   extraction:
-    - gemini/gemini-2.5-flash
-    - gemini/gemini-2.5-pro
-    - openrouter/qwen/qwen2.5-vl-72b-instruct:free
+    - gemini/gemini-3.5-flash
+    - gemini/gemini-3.8-flash
+    - openrouter/nvidia/nemotron-3.5-super-vl:free
   router:
     - ollama/qwen3:8b
-    - groq/llama-3.1-8b-instant
-    - openrouter/meta-llama/llama-3.3-70b-instruct:free
+    - groq/openai/gpt-oss-20b
+    - openrouter/nvidia/nemotron-3.5-lightning:free
   analyst:
     - ollama/qwen3:8b
     - groq/openai/gpt-oss-120b
-    - openrouter/meta-llama/llama-3.3-70b-instruct:free
+    - openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
   drafting:
     - ollama/qwen3:8b
-    - groq/llama-3.3-70b-versatile
-    - openrouter/meta-llama/llama-3.3-70b-instruct:free
+    - groq/qwen/qwen3.8-27b
+    - openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
