@@ -126,3 +126,21 @@ def test_tool_loop_runs_only_given_tools() -> None:
     assert calls == ["PO-1"]
     assert script.bodies[0]["tools"][0]["function"]["name"] == "lookup"
     assert script.bodies[1]["messages"][-1]["content"] == '{"status":"open"}'
+
+
+def test_tool_use_failure_falls_through_to_structured_answer() -> None:
+    def lookup(po_number: str) -> dict[str, str]:
+        """Look up a PO."""
+        return {}
+
+    refused = httpx.Response(
+        400,
+        json={"error": {"message": "tool 'json' not in request.tools", "code": "tool_use_failed"}},
+    )
+    script = Script(a=[refused, _completion('{"word": "answered"}')])
+    reply = _ask(_router(script), tools=[lookup])
+    assert (reply.value.word, reply.model) == ("answered", "p1/a")
+    final = script.bodies[-1]
+    assert "tools" not in final
+    assert final["response_format"]["type"] == "json_schema"
+    assert final["response_format"]["json_schema"]["name"] == "Answer"

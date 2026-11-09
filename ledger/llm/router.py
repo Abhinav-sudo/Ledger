@@ -148,7 +148,7 @@ class ModelRouter:
         messages = list(messages)
         content = self._tool_loop(role, provider, model, client, messages, tools)
         if content is None:
-            content = self._call(role, provider, model, client, messages, json_mode=True).content
+            content = self._call(role, provider, model, client, messages, schema=schema).content
         for repair in (False, True):
             try:
                 return _parse(content, schema)
@@ -165,9 +165,7 @@ class ModelRouter:
                         "content": f"That reply was invalid: {e}\nSend corrected JSON only.",
                     },
                 ]
-                content = self._call(
-                    role, provider, model, client, messages, json_mode=True
-                ).content
+                content = self._call(role, provider, model, client, messages, schema=schema).content
         return None
 
     def _tool_loop(
@@ -184,10 +182,23 @@ class ModelRouter:
         by_name = {f.__name__: f for f in tools}
         specs = [convert_to_openai_tool(f) for f in tools]
         for _ in range(MAX_TOOL_ROUNDS):
-            msg = self._call(role, provider, model, client, messages, tools=specs)
+            try:
+                msg = self._call(role, provider, model, client, messages, tools=specs)
+            except openai.BadRequestError as e:
+                # Some models try to answer by calling a tool that does not exist; the
+                # structured call that follows gets the answer instead.
+                if e.code == "tool_use_failed":
+                    return None
+                raise
             if not msg.tool_calls:
                 return msg.content
-            messages.append(msg.model_dump(exclude_none=True))
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": msg.content or "",
+                    "tool_calls": [c.model_dump() for c in msg.tool_calls],
+                }
+            )
             for call in msg.tool_calls:
                 messages.append(
                     {
@@ -205,19 +216,24 @@ class ModelRouter:
         model: str,
         client: openai.OpenAI,
         messages: list[dict[str, Any]],
-        json_mode: bool = False,
+        schema: type[BaseModel] | None = None,
         tools: list[dict[str, Any]] | None = None,
     ) -> Any:
         kwargs: dict[str, Any] = {"model": model, "messages": messages, "temperature": 0}
-        if json_mode:
-            kwargs["response_format"] = {"type": "json_object"}
+        if schema:
+            kwargs["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": schema.__name__, "schema": schema.model_json_schema()},
+            }
         if tools:
             kwargs["tools"] = tools
         start = time.monotonic()
         try:
             resp = client.chat.completions.create(**kwargs)
         except openai.APIStatusError as e:
-            self._log(role, provider, model, start, None, f"http {e.status_code}")
+            self._log(
+                role, provider, model, start, None, f"http {e.status_code} {e.code or ''}".strip()
+            )
             raise
         except openai.APIConnectionError as e:
             self._log(role, provider, model, start, None, f"connection: {type(e).__name__}")
