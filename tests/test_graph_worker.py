@@ -1,8 +1,9 @@
 import psycopg
 import pytest
-from helpers import FakeRouter, extracted
+from helpers import FakeRouter
 from psycopg.rows import dict_row
 
+from evals.truth import extracted
 from ledger.graph import build as b
 from ledger.graph.nodes import extract
 from ledger.workers import graph_worker

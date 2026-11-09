@@ -2,8 +2,9 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from helpers import ACCOUNT, bank, extracted
+from helpers import ACCOUNT, bank
 
+from evals.truth import extracted
 from ledger.contracts.decisions import Proposal
 from ledger.graph.nodes import payment_intent
 from world.generator import World

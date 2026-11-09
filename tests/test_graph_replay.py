@@ -7,9 +7,10 @@ from pathlib import Path
 
 import psycopg
 import pytest
-from helpers import FakeRouter, extracted
+from helpers import FakeRouter
 from langgraph.types import Command
 
+from evals.truth import extracted
 from ledger import chaos
 from ledger.graph import build as b
 from ledger.graph.nodes import approve, payment_intent

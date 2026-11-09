@@ -3,9 +3,10 @@ from pathlib import Path
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
-from helpers import FakeRouter, extracted
+from helpers import FakeRouter
 from psycopg.rows import dict_row
 
+from evals.truth import extracted
 from ledger.api.main import create_app
 from ledger.graph import build as b
 from ledger.workers import graph_worker

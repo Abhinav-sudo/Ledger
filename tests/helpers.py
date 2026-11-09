@@ -7,30 +7,12 @@ from fastapi.testclient import TestClient
 from psycopg.rows import dict_row
 
 from ledger.contracts.erp import BankAccount, POLine, PriorInvoice, PurchaseOrder
-from ledger.contracts.invoice import ExtractedInvoice, LineItem
+from ledger.contracts.invoice import ExtractedInvoice
 from ledger.contracts.payment import PaymentIntent
 from ledger.llm.router import Reply
 from ledger.side_effects import idempotency, outbox
-from world.generator import Invoice, Vendor, World
+from world.generator import Invoice, World
 from world.mock_bank.app import create_app as create_bank
-
-
-def extracted(inv: Invoice, vendor: Vendor) -> ExtractedInvoice:
-    """What a perfect extractor would read off the PDF."""
-    return ExtractedInvoice(
-        vendor_name=vendor.short_name if inv.short_vendor_name else vendor.name,
-        invoice_no=inv.invoice_no,
-        invoice_date=inv.invoice_date,
-        po_number=inv.po_number,
-        currency=inv.currency,
-        lines=[
-            LineItem(sku=ln.sku, description=ln.description, qty=ln.qty, unit_price=ln.unit_price)
-            for ln in inv.lines
-        ],
-        total=inv.total,
-        remit_to_account=inv.remit_to_account,
-        field_confidence={"all": 1.0},
-    )
 
 
 class Erp:

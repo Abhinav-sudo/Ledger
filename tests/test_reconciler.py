@@ -2,10 +2,11 @@ from pathlib import Path
 
 import psycopg
 import pytest
-from helpers import ACCOUNT, FakeRouter, add_intent, bank, extracted
+from helpers import ACCOUNT, FakeRouter, add_intent, bank
 from langgraph.types import Command
 from psycopg.rows import dict_row
 
+from evals.truth import extracted
 from ledger.graph import build as b
 from ledger.graph.nodes import extract
 from ledger.side_effects import dispatcher

@@ -1,8 +1,9 @@
 from collections import Counter
 
 import pytest
-from helpers import FakeRouter, extracted
+from helpers import FakeRouter
 
+from evals.truth import extracted
 from ledger.graph import build as b
 from ledger.graph.nodes import extract
 from world.generator import World
