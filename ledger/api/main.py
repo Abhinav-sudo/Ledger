@@ -20,7 +20,7 @@ class Decision(BaseModel):
     note: str | None = None
 
 
-def _email_text(raw: bytes) -> str:
+def email_text(raw: bytes) -> str:
     msg = message_from_bytes(raw, policy=policy.default)
     body = msg.get_body(preferencelist=("plain",))
     return f"Subject: {msg['subject']}\n\n{body.get_content() if body else ''}"
@@ -75,7 +75,7 @@ def create_app(router: ModelRouter | None = None) -> FastAPI:
         state = {
             "invoice_id": invoice_id,
             "pdf_path": str(path),
-            "email": _email_text(email.file.read()) if email else None,
+            "email": email_text(email.file.read()) if email else None,
         }
         background.add_task(app.state.graph.invoke, state, config)
         return {"thread_id": invoice_id}
