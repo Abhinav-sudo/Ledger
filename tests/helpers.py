@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from ledger.contracts.erp import BankAccount, POLine, PriorInvoice, PurchaseOrder
 from ledger.contracts.invoice import ExtractedInvoice, LineItem
+from ledger.llm.router import Reply
 from world.generator import Invoice, Vendor, World
 
 
@@ -53,3 +54,19 @@ class Erp:
             total=inv.total,
             po_number=inv.po_number,
         )
+
+
+class FakeRouter:
+    """Stands in for ModelRouter: replays a scripted extraction, gives canned analyses."""
+
+    def __init__(self, *extractions: ExtractedInvoice) -> None:
+        self.roles = {"extraction": ["fake/weak", "fake/mid", "fake/strong"]}
+        self.extractions = list(extractions)
+        self.calls: list[str] = []
+
+    def complete(self, role, messages, schema, tools=None, start_at=0):
+        self.calls.append(role)
+        if role == "extraction":
+            value = self.extractions[min(start_at, len(self.extractions) - 1)]
+            return Reply(value, self.roles["extraction"][start_at], start_at)
+        return Reply(schema(finding="looks as matched", evidence=[], confidence=0.5), "fake/a", 0)

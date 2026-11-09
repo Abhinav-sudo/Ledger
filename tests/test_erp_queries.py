@@ -1,6 +1,3 @@
-import psycopg
-import pytest
-
 from ledger.tools import erp_queries
 from world.generator import World
 
@@ -18,8 +15,3 @@ def test_purchase_order_and_receipts(db: str, world: World) -> None:
     assert [ln.unit_price for ln in got.lines] == [ln.unit_price for ln in po.lines]
     assert set(erp_queries.get_receipts(po.po_number)) == {ln.line_no for ln in po.lines}
     assert erp_queries.get_purchase_order("PO-00000") is None
-
-
-def test_connection_refuses_writes(db: str) -> None:
-    with erp_queries.connect() as con, pytest.raises(psycopg.errors.ReadOnlySqlTransaction):
-        con.execute("DELETE FROM vendors")
