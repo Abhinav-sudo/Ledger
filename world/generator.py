@@ -8,6 +8,8 @@ from decimal import Decimal
 from email.message import EmailMessage
 from pathlib import Path
 
+from world import pdf_render
+
 DEV_SEED = 42
 HELDOUT_SEED = 7919
 
@@ -24,7 +26,6 @@ PRICE_TOLERANCE = Decimal("0.02")
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")
 START = date(2026, 1, 5)
-LAYOUTS = 4
 DATE_FORMATS = ("%Y-%m-%d", "%d %b %Y", "%B %-d, %Y", "%d.%m.%Y")
 
 STEMS = [
@@ -335,7 +336,7 @@ class _Builder:
             currency="USD",
             remit_to_account=remit or vendor.current_account,
             lines=lines,
-            layout=self.rng.randrange(LAYOUTS),
+            layout=self.rng.randrange(len(pdf_render.LAYOUTS)),
             date_format=self.rng.choice(DATE_FORMATS),
             short_vendor_name=self.rng.random() < 0.3,
         )
@@ -701,6 +702,11 @@ def write(world: World, out: Path) -> None:
         msg["X-Ledger-Invoice"] = e.invoice_id
         msg.set_content(e.body, cte="7bit")
         (emails / f"{e.invoice_id}.eml").write_bytes(bytes(msg))
+    pdfs = out / "pdfs"
+    pdfs.mkdir(exist_ok=True)
+    vendors = {v.id: v for v in world.vendors}
+    for inv in world.invoices:
+        pdf_render.render(inv, vendors[inv.vendor_id], pdfs / f"{inv.id}.pdf")
 
 
 def main() -> None:
