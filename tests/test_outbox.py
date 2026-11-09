@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import psycopg
 import pytest
+from langgraph.checkpoint.base import empty_checkpoint
 
 from ledger import chaos
 from ledger.contracts.payment import PaymentIntent
@@ -87,3 +88,38 @@ def test_rerun_is_success_but_a_different_payment_is_refused(saver, db: str) -> 
         saver.put_writes(_config("OB-3"), [(CHANNEL, _intent("OB-3", "99.00"))], "t3")
     intents, writes_saved, _ = _counts(db, "OB-3")
     assert (intents, writes_saved) == (1, 4)
+
+
+def _checkpoint(intent: PaymentIntent) -> tuple[dict, dict]:
+    cp = empty_checkpoint()
+    cp["channel_values"] = {CHANNEL: intent}
+    return cp, {CHANNEL: "1"}
+
+
+def _checkpoints(db: str, thread: str) -> int:
+    with psycopg.connect(db) as con:
+        return con.execute(
+            "SELECT count(*) FROM checkpoints WHERE thread_id = %s", (thread,)
+        ).fetchone()[0]
+
+
+def test_checkpoint_carrying_an_intent_commits_with_it(saver, db: str) -> None:
+    cp, versions = _checkpoint(_intent("OB-1"))
+    saver.put({"configurable": {"thread_id": "OB-1", "checkpoint_ns": ""}}, cp, {}, versions)
+    assert _checkpoints(db, "OB-1") == 1
+    assert _counts(db, "OB-1")[0] == 1
+
+
+def test_failed_checkpoint_leaves_no_intent(
+    saver, db: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom(name: str) -> None:
+        if name == "outbox.before_commit":
+            raise RuntimeError("killed")
+
+    monkeypatch.setattr(chaos, "point", boom)
+    cp, versions = _checkpoint(_intent("OB-2"))
+    with pytest.raises(RuntimeError):
+        saver.put({"configurable": {"thread_id": "OB-2", "checkpoint_ns": ""}}, cp, {}, versions)
+    assert _checkpoints(db, "OB-2") == 0
+    assert _counts(db, "OB-2")[0] == 0

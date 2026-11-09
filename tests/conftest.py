@@ -46,7 +46,13 @@ def database(world: World) -> Iterator[str]:
 @pytest.fixture
 def db(database: str) -> str:
     with psycopg.connect(database) as con:
-        con.execute(
-            "TRUNCATE invoice_lines, invoices, payment_intents, audit_log, graph_jobs CASCADE"
-        )
+        checkpoints = [
+            r[0]
+            for r in con.execute(
+                "SELECT tablename FROM pg_tables WHERE schemaname = 'public' "
+                "AND tablename LIKE 'checkpoint%' AND tablename <> 'checkpoint_migrations'"
+            )
+        ]
+        tables = ["invoice_lines", "invoices", "payment_intents", "audit_log", "graph_jobs"]
+        con.execute(f"TRUNCATE {', '.join(tables + checkpoints)} CASCADE")
     return database
