@@ -13,7 +13,11 @@ from world.generator import World
 
 
 def test_approve_replays_on_resume_but_writes_once(
-    db: str, world: World, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    db: str,
+    world: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     label = next(
         lb for lb in world.labels if lb.exception_type == "bank_change" and "remit-to" in lb.notes
@@ -58,6 +62,8 @@ def test_approve_replays_on_resume_but_writes_once(
     assert out["status"] == "payment_pending"
     assert out["proposal"].amount == inv.total
     assert isinstance(out["proposal"].amount, Decimal)
+    serde = [r.message for r in caplog.records if r.name.startswith("langgraph.checkpoint")]
+    assert not [m for m in serde if "unregistered" in m or "Blocked" in m]
     with psycopg.connect(db) as con:
         assert con.execute("SELECT count(*) FROM invoices WHERE id = %s", (inv.id,)).fetchone() == (
             1,
