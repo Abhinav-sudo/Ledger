@@ -13,3 +13,7 @@ def database_url() -> str:
 
 def inbox() -> Path:
     return Path(os.environ.get("LEDGER_INBOX", "out/inbox"))
+
+
+def bank_url() -> str:
+    return os.environ.get("BANK_URL", "http://localhost:8081")

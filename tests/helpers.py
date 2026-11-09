@@ -1,10 +1,18 @@
 from collections import defaultdict
 from decimal import Decimal
+from pathlib import Path
+
+import psycopg
+from fastapi.testclient import TestClient
+from psycopg.rows import dict_row
 
 from ledger.contracts.erp import BankAccount, POLine, PriorInvoice, PurchaseOrder
 from ledger.contracts.invoice import ExtractedInvoice, LineItem
+from ledger.contracts.payment import PaymentIntent
 from ledger.llm.router import Reply
+from ledger.side_effects import idempotency, outbox
 from world.generator import Invoice, Vendor, World
+from world.mock_bank.app import create_app as create_bank
 
 
 def extracted(inv: Invoice, vendor: Vendor) -> ExtractedInvoice:
@@ -70,3 +78,31 @@ class FakeRouter:
             value = self.extractions[min(start_at, len(self.extractions) - 1)]
             return Reply(value, self.roles["extraction"][start_at], start_at)
         return Reply(schema(finding="looks as matched", evidence=[], confidence=0.5), "fake/a", 0)
+
+
+ACCOUNT = "GB80LDGR07117181324261"
+
+
+def add_intent(con: psycopg.Connection, vendor_id: str, invoice_id: str, amount: str) -> str:
+    """An invoice row and its pending payment intent; returns the idempotency key."""
+    con.execute(
+        "INSERT INTO invoices (id, vendor_id, invoice_no, invoice_date, currency, "
+        "remit_to_account, total) VALUES (%s, %s, %s, '2026-01-05', 'USD', %s, %s) "
+        "ON CONFLICT DO NOTHING",
+        (invoice_id, vendor_id, invoice_id, ACCOUNT, amount),
+    )
+    key = idempotency.key(invoice_id, Decimal(amount), ACCOUNT)
+    intent = PaymentIntent(
+        id=idempotency.intent_id(key),
+        invoice_id=invoice_id,
+        amount=Decimal(amount),
+        vendor_account=ACCOUNT,
+        idempotency_key=key,
+    )
+    with con.cursor(row_factory=dict_row) as cur:
+        outbox.record(cur, intent)
+    return key
+
+
+def bank(db_path: Path, **rates: float) -> TestClient:
+    return TestClient(create_bank(db_path, seed=0, **rates))
