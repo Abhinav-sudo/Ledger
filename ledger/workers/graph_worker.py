@@ -1,6 +1,7 @@
 """Runs invoice threads from graph_jobs. Run as: python -m ledger.workers.graph_worker"""
 
 import logging
+import os
 import time
 from collections.abc import Callable
 from typing import Any
@@ -18,7 +19,8 @@ from ledger.settings import database_url
 
 log = logging.getLogger("ledger.worker")
 
-LEASE_S = 30
+# Must outlast the slowest job, or a live worker's invoice gets claimed a second time.
+LEASE_S = int(os.environ.get("LEDGER_JOB_LEASE_S", "300"))
 MAX_ATTEMPTS = 5
 
 ENQUEUE = """
