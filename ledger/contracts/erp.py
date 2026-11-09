@@ -32,3 +32,9 @@ class PriorInvoice(BaseModel):
     invoice_date: date
     total: Money
     po_number: str | None
+
+
+class Vendor(BaseModel):
+    id: str
+    name: str
+    short_name: str
