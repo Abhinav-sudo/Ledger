@@ -1,3 +1,52 @@
+Ledger is a multi-agent accounts-payable exception-handling system on LangGraph. Its core
+claim: the system can be killed at any point and never pays an invoice twice.
+
+## Invariants
+
+These are non-negotiable. A change that breaks one is wrong even if the tests pass.
+
+1. Single write path. Analyst agents (variance, duplicate, bank-change, missing-PO) are bound
+   to read-only tools only. Only the `payment_intent` node creates payments, and it writes an
+   outbox row. It never calls the bank directly.
+2. Replay rule. A LangGraph node re-runs from its start when the graph resumes after
+   `interrupt()`. Every side-effecting node must be idempotent. The approval node writes
+   nothing before it calls `interrupt()`.
+3. Outbox. The payment node writes the state update and a `payment_intents` row in one
+   Postgres transaction.
+   - `idempotency_key` is UNIQUE and equals sha256(invoice_id | amount | vendor_account).
+   - A unique-constraint violation on re-run counts as success.
+   - A separate dispatcher claims rows with `SELECT ... FOR UPDATE SKIP LOCKED` and sends
+     the `Idempotency-Key` header.
+4. No generated amounts. Amounts come only from validated extracted fields. LLMs choose from
+   enumerated actions. All arithmetic is in Python using `Decimal`, never `float`.
+5. Policy is code. The approval matrix is deterministic Python rules. An LLM may explain a
+   decision but never makes it. Bank-detail changes always go to a human.
+6. Free tier only. Everything runs locally in Docker Compose. LLM access goes through one
+   provider-agnostic `ModelRouter` with an OpenAI-compatible interface.
+   - Providers, in order: Ollama (local), Gemini free tier (vision extraction), Groq free
+     tier, OpenRouter `:free` models.
+   - Each role in config gets one primary model and two fallbacks.
+   - A circuit breaker trips a provider after repeated 429 errors.
+   - Never hard-code a model name outside the config.
+7. Ground truth. The generator is seeded and writes a label for every invoice. The dev seed
+   and the held-out seed are committed (`world/generator.py`). Never tune on held-out data.
+
+## Stack
+
+Python 3.12, uv, LangGraph 1.x with PostgresSaver, Pydantic v2, FastAPI, Postgres 16,
+Redis + arq, Mailpit, ReportLab, pytest + Hypothesis, OpenTelemetry -> Langfuse.
+
+## Conventions
+
+Typed everywhere, ruff, small modules. Tests ship in the same commit as the code that needs them.
+
+## Commands
+
+- `uv run pytest`
+- `uv run ruff check . && uv run ruff format --check .`
+- `docker compose up` (postgres, redis, mailpit, mock-bank)
+- `uv run python -m world.generator --n 500 --seed 42` writes to `out/seed-42/`
+
 ## Git discipline
 
 - The working tree must be clean at the end of every task. Never stop with uncommitted
