@@ -36,3 +36,5 @@ npm-debug.log*
 *.swp
 
 Ledger — implementation plan (free-tier build).md
+
+out/

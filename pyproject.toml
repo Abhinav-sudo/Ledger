@@ -1,0 +1,31 @@
+[project]
+name = "ledger"
+version = "0.1.0"
+description = "Multi-agent accounts-payable exception handling with exactly-once payments"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "reportlab",
+    "uvicorn",
+]
+
+[dependency-groups]
+dev = [
+    "httpx",
+    "hypothesis",
+    "pytest",
+    "ruff",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
