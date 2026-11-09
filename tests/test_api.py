@@ -42,7 +42,7 @@ def test_clean_invoice_pays_without_a_human(
     assert body["status"] == "payment_pending"
     assert body["interrupt"] is None
     assert isinstance(body["state"]["proposal"]["amount"], str)
-    assert [e["event"] for e in body["audit"]][-1] == "payment_intent.called"
+    assert [e["event"] for e in body["audit"]][-1] == "payment_intent.recorded"
     assert client.post(f"/invoices/{thread_id}/approve", json={"by": "x"}).status_code == 409
 
 
@@ -69,7 +69,7 @@ def test_reject_ends_without_payment(client: TestClient, world: World, tmp_path:
     client.post(f"/invoices/{thread_id}/reject", json={"by": "treasury@ledger", "note": "fraud"})
     body = client.get(f"/invoices/{thread_id}").json()
     assert body["status"] == "rejected"
-    assert "payment_intent.called" not in [e["event"] for e in body["audit"]]
+    assert "payment_intent.recorded" not in [e["event"] for e in body["audit"]]
 
 
 def test_unknown_invoice_is_404(client: TestClient) -> None:

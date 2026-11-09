@@ -3,6 +3,7 @@ from typing import Annotated, TypedDict
 
 from ledger.contracts.decisions import Analysis, Approval, AuditEvent, Proposal
 from ledger.contracts.invoice import ExtractedInvoice, MatchResult
+from ledger.contracts.payment import PaymentIntent
 
 
 class InvoiceState(TypedDict, total=False):
@@ -15,5 +16,5 @@ class InvoiceState(TypedDict, total=False):
     analyses: Annotated[list[Analysis], operator.add]
     proposal: Proposal | None
     approval: Approval | None
-    payment_intent_id: str | None
+    intent: PaymentIntent | None
     audit: Annotated[list[AuditEvent], operator.add]
