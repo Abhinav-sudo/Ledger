@@ -109,42 +109,42 @@ To reproduce, run `docker compose up -d postgres`, then
 
 | run | kills | invoices | bank payments | duplicate payments | orphaned intents | payments with no intent | stuck threads |
 |---|---|---|---|---|---|---|---|
-| 1 | 36 | 60 | 49 | 0 | 0 | 0 | 0 |
-| 2 | 42 | 63 | 55 | 0 | 0 | 0 | 0 |
-| 3 | 49 | 60 | 50 | 0 | 0 | 0 | 0 |
-| 4 | 44 | 67 | 53 | 0 | 0 | 0 | 0 |
-| **all** | **171** | **250** | **207** | **0** | **0** | **0** | **0** |
+| 1 | 30 | 60 | 49 | 0 | 0 | 0 | 0 |
+| 2 | 57 | 63 | 55 | 0 | 0 | 0 | 0 |
+| 3 | 35 | 60 | 50 | 0 | 0 | 0 | 0 |
+| 4 | 43 | 67 | 53 | 0 | 0 | 0 | 0 |
+| **all** | **165** | **250** | **207** | **0** | 0 | 0 | 0 |
 
 ### `LEDGER_OUTBOX=off` (the node pays inline, with a fresh request id per attempt)
 
 | run | kills | invoices | bank payments | duplicate payments | orphaned intents | payments with no intent | stuck threads |
 |---|---|---|---|---|---|---|---|
-| 1 | 16 | 60 | 63 | 14 | 0 | 63 | 0 |
-| 2 | 23 | 63 | 77 | 22 | 0 | 77 | 0 |
-| 3 | 24 | 60 | 66 | 16 | 0 | 66 | 0 |
-| 4 | 22 | 67 | 71 | 18 | 0 | 71 | 0 |
-| **all** | **85** | **250** | **277** | **70** | 0 | 277 | 0 |
+| 1 | 19 | 60 | 61 | 12 | 0 | 61 | 0 |
+| 2 | 19 | 63 | 76 | 21 | 0 | 76 | 0 |
+| 3 | 25 | 60 | 67 | 17 | 0 | 67 | 0 |
+| 4 | 17 | 67 | 64 | 11 | 0 | 64 | 0 |
+| **all** | **80** | **250** | **268** | **61** | 0 | 268 | 0 |
 
 ### `LEDGER_OUTBOX=off-keyed` (the node pays inline, reusing the deterministic key)
 
 | run | kills | invoices | bank payments | duplicate payments | orphaned intents | payments with no intent | stuck threads |
 |---|---|---|---|---|---|---|---|
-| 1 | 27 | 60 | 49 | 0 | 0 | 49 | 0 |
-| 2 | 26 | 63 | 55 | 0 | 0 | 55 | 0 |
-| 3 | 28 | 60 | 50 | 0 | 0 | 50 | 0 |
-| 4 | 16 | 67 | 53 | 0 | 0 | 53 | 0 |
-| **all** | **97** | **250** | **207** | **0** | 0 | 207 | 0 |
+| 1 | 18 | 60 | 49 | 0 | 0 | 49 | 0 |
+| 2 | 20 | 63 | 55 | 0 | 0 | 55 | 0 |
+| 3 | 27 | 60 | 50 | 0 | 0 | 50 | 0 |
+| 4 | 20 | 67 | 53 | 0 | 0 | 53 | 0 |
+| **all** | **85** | **250** | **207** | **0** | 0 | 207 | 0 |
 
 "Invoices" counts each run's slice plus the originals of any duplicates in it. Not every
 invoice should be paid: held, rejected and credit-note invoices aren't. That is why the
 design pays 207 of 250. No invoice labelled as a duplicate was paid in any mode.
 
 **How to read this.**
-- **The outbox design** survived 171 kills and a bank dropping responses, with zero duplicate
+- **The outbox design** survived 165 kills and a bank dropping responses, with zero duplicate
   payments. Every payment has an intent, and every thread finished.
-- **Paying inline with a fresh request id** paid 70 invoices twice or more, one of them five
-  times. Most of these come from the drop window and from kills just after the bank call: the
-  retry looks like a new payment to the bank. This mode also logs fewer kills, because the
+- **Paying inline with a fresh request id** made 61 duplicate payments, with some invoices
+  paid four times. Most come from the drop window and from kills just after the bank call:
+  the retry looks like a new payment to the bank. This mode also logs fewer kills, because the
   dispatchers have no work and their chaos points never fire.
 - **Paying inline but reusing the stable key** also produced zero duplicates. Against a bank
   that honours idempotency keys, the key is what stops the double payment. What the outbox
