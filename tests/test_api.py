@@ -40,7 +40,7 @@ def test_clean_invoice_pays_without_a_human(
     thread_id = _post(client, world, tmp_path, "clean")
     body = client.get(f"/invoices/{thread_id}").json()
     assert body["status"] == "payment_pending"
-    assert body["interrupt"] is None
+    assert body["next"] == ["reconcile"]
     assert isinstance(body["state"]["proposal"]["amount"], str)
     assert [e["event"] for e in body["audit"]][-1] == "payment_intent.recorded"
     assert client.post(f"/invoices/{thread_id}/approve", json={"by": "x"}).status_code == 409
