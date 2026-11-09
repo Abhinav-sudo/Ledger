@@ -17,7 +17,7 @@ def world() -> World:
 
 
 @pytest.fixture(scope="session")
-def db(world: World) -> Iterator[str]:
+def database(world: World) -> Iterator[str]:
     """A throwaway database holding the schema and the ERP side of a small world."""
     admin = database_url()
     try:
@@ -41,3 +41,10 @@ def db(world: World) -> Iterator[str]:
         os.environ["LEDGER_DATABASE_URL"] = previous
     with psycopg.connect(admin, autocommit=True) as con:
         con.execute(f"DROP DATABASE {name} WITH (FORCE)")
+
+
+@pytest.fixture
+def db(database: str) -> str:
+    with psycopg.connect(database) as con:
+        con.execute("TRUNCATE invoice_lines, invoices CASCADE")
+    return database
