@@ -14,6 +14,7 @@ from evals.truth import extracted
 from ledger import chaos
 from ledger.graph import build as b
 from ledger.graph.nodes import approve, payment_intent
+from ledger.workers import graph_worker
 from world import pdf_render
 from world.generator import World
 
@@ -154,6 +155,8 @@ def test_worker_killed_around_the_outbox_commit_records_one_intent(
     assert _intents(db, state["invoice_id"]) == intents_after_kill
     # After the commit the node's writes are durable, so LangGraph counts it as done.
     assert graph.get_state(config).next == pending
+    job = {"invoice_id": state["invoice_id"], "kind": "resume", "payload": {}}
+    assert graph_worker._input(graph, job) == (True, None)
 
     out = graph.invoke(None, config, durability="sync")
     pool.close()

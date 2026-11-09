@@ -53,7 +53,9 @@ def _input(graph: CompiledStateGraph, job: dict[str, Any]) -> tuple[bool, Any]:
         return True, {"invoice_id": job["invoice_id"], **job["payload"]}
     if job["kind"] == "resume" and snapshot.next == ("approve",):
         return True, Command(resume=job["payload"])
-    if snapshot.next and not snapshot.interrupts:
+    # A task can be done (its writes committed) while the checkpoint has not moved past it,
+    # so next is empty; invoking with None applies those writes and carries on.
+    if snapshot.tasks and not snapshot.interrupts:
         return True, None
     return False, None
 
