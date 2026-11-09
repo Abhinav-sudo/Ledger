@@ -17,3 +17,11 @@ def inbox() -> Path:
 
 def bank_url() -> str:
     return os.environ.get("BANK_URL", "http://localhost:8081")
+
+
+def outbox_mode() -> str:
+    """on (default), or the crash-suite ablations: off and off-keyed pay the bank inline."""
+    mode = os.environ.get("LEDGER_OUTBOX", "on")
+    if mode not in ("on", "off", "off-keyed"):
+        raise ValueError(f"LEDGER_OUTBOX must be on, off or off-keyed, not {mode!r}")
+    return mode
