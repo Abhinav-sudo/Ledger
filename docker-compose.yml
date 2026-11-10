@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ledger
+      POSTGRES_PASSWORD: ledger
+      POSTGRES_DB: ledger
+    ports: ["5432:5432"]
+    volumes:
+      - ./world/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "ledger", "-d", "ledger"]
+      interval: 2s
+      retries: 30
+
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports: ["1025:1025", "8025:8025"]
+
+  mock-bank:
+    build:
+      context: .
+      dockerfile: world/mock_bank/Dockerfile
+    environment:
+      BANK_FAIL_RATE: ${BANK_FAIL_RATE:-0}
+      BANK_TIMEOUT_RATE: ${BANK_TIMEOUT_RATE:-0}
+      BANK_TIMEOUT_S: ${BANK_TIMEOUT_S:-30}
+      BANK_DROP_RATE: ${BANK_DROP_RATE:-0}
+    ports: ["8081:8081"]
+    volumes:
+      - bankdata:/data
+
+volumes:
+  pgdata:
+  bankdata:

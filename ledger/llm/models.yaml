@@ -1,0 +1,37 @@
+breaker:
+  threshold: 3
+  cooldown_s: 60
+
+providers:
+  ollama:
+    base_url_env: OLLAMA_BASE_URL
+    base_url: http://localhost:11434/v1
+  gemini:
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key_env: GEMINI_API_KEY
+  groq:
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+  openrouter:
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+
+# Each chain is primary, then two fallbacks. Extraction is ordered weak to strong so that
+# low-confidence escalation moves to the next entry.
+roles:
+  extraction:
+    - gemini/gemini-3.5-flash
+    - gemini/gemini-3.8-flash
+    - openrouter/nvidia/nemotron-3.5-super-vl:free
+  router:
+    - ollama/qwen3:8b
+    - groq/openai/gpt-oss-20b
+    - openrouter/nvidia/nemotron-3.5-lightning:free
+  analyst:
+    - ollama/qwen3:8b
+    - groq/openai/gpt-oss-120b
+    - openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+  drafting:
+    - ollama/qwen3:8b
+    - groq/qwen/qwen3.8-27b
+    - openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
